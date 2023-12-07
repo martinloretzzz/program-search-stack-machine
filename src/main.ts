@@ -1,60 +1,31 @@
 import "./style.css";
 
 const operantMap = {
-	0: "nop",
-	1: "push-a",
-	2: "push-b",
-	3: "push-c",
-	4: "add",
-	5: "subtract",
-	6: "multiply",
-	7: "divide",
+	0: "push-a",
+	1: "push-b",
+	2: "push-c",
+	3: "add",
+	4: "subtract",
+	5: "multiply",
+	6: "divide",
 } as const;
 
 type Operant = (typeof operantMap)[keyof typeof operantMap];
 type Genome = number[];
 type Program = Operant[];
 
-const runProgram = (program: Program, data: number[]) => {
-	const stack: number[] = [];
-	for (const operant of program) {
-		switch (operant) {
-			case "push-a":
-				stack.push(data[0]);
-				break;
-			case "push-b":
-				stack.push(data[1]);
-				break;
-			case "push-c":
-				stack.push(data[2]);
-				break;
-			case "add":
-				stack.push(stack.pop()! + stack.pop()!);
-				break;
-			case "subtract":
-				stack.push(stack.pop()! - stack.pop()!);
-				break;
-			case "multiply":
-				stack.push(stack.pop()! * stack.pop()!);
-				break;
-			case "divide":
-				stack.push(stack.pop()! / stack.pop()!);
-				break;
-		}
-	}
-	if (stack.length !== 1) return undefined;
-	return stack.pop()!;
-};
+interface Test {
+	x: number[];
+	y: number;
+}
 
-const randomIntBetween = (min: number, max: number) => {
-	return Math.floor(Math.random() * (max - min + 1) + min);
-};
+const randomIntBetween = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1) + min);
 
-const randomPush = () => randomIntBetween(1, 3);
-const randomMathOperant = () => randomIntBetween(4, 7);
-const randomOperant = () => randomIntBetween(1, 7);
-const isPush = (op: number) => op >= 1 && op <= 3;
-const isMathOperant = (op: number) => op >= 4 && op <= 7;
+const randomPush = () => randomIntBetween(0, 2);
+const randomMathOperant = () => randomIntBetween(3, 6);
+const randomOperant = () => randomIntBetween(0, 6);
+const isPush = (op: number) => op >= 0 && op <= 2;
+const isMathOperant = (op: number) => op >= 3 && op <= 6;
 
 const generateInitialGenome = (maxProgramSize: number) => {
 	const program: Genome = [];
@@ -85,11 +56,10 @@ const genomeToProgram = (genome: Genome): Program => {
 	return genome.map((gene) => (operantMap as any)[gene] as Operant);
 };
 
-const isProgramValid = (program: Program) => {
+const isGenomeValid = (genome: Genome) => {
 	let stackPointer = 0;
-	for (const operant of program) {
-		if (operant == "nop") continue;
-		if (operant.startsWith("push-")) {
+	for (const opId of genome) {
+		if (isPush(opId)) {
 			stackPointer++;
 		} else {
 			stackPointer -= 1;
@@ -98,12 +68,43 @@ const isProgramValid = (program: Program) => {
 	}
 };
 
-const doesProgramPassTests = (tests: number[][], program: Program) => {
+const doesGenomePassTests = (tests: Test[], genome: Genome) => {
 	for (const test of tests) {
-		const result = runProgram(program, test);
-		if (result !== test[3]) return false;
+		const result = runGenome(genome, test.x);
+		if (result !== test.y) return false;
 	}
 	return true;
+};
+
+const runGenome = (genome: Genome, data: number[]) => {
+	const stack: number[] = [];
+	for (const operant of genome) {
+		switch (operant) {
+			case 0:
+				stack.push(data[0]);
+				break;
+			case 1:
+				stack.push(data[1]);
+				break;
+			case 2:
+				stack.push(data[2]);
+				break;
+			case 3:
+				stack.push(stack.pop()! + stack.pop()!);
+				break;
+			case 4:
+				stack.push(stack.pop()! - stack.pop()!);
+				break;
+			case 5:
+				stack.push(stack.pop()! * stack.pop()!);
+				break;
+			case 6:
+				stack.push(stack.pop()! / stack.pop()!);
+				break;
+		}
+	}
+	if (stack.length !== 1) return undefined;
+	return stack.pop()!;
 };
 
 const mutateGenome = (genome: Genome): Genome => {
@@ -116,7 +117,7 @@ const mutateGenome = (genome: Genome): Genome => {
 	return newGenome;
 };
 
-const mutationProgramSearch = (tests: number[][], populationSize: number, generationCount: number) => {
+const mutationProgramSearch = (tests: Test[], populationSize: number, generationCount: number) => {
 	const population = [];
 	for (let i = 0; i < populationSize; i++) {
 		population.push(generateInitialGenome(8));
@@ -125,8 +126,8 @@ const mutationProgramSearch = (tests: number[][], populationSize: number, genera
 	for (let gen = 0; gen < generationCount; gen++) {
 		console.log(`Generation ${gen}`);
 		for (const genome of population) {
-			const genomeProgram = genomeToProgram(genome);
-			if (isProgramValid(genomeProgram) && doesProgramPassTests(tests, genomeProgram)) {
+			if (isGenomeValid(genome) && doesGenomePassTests(tests, genome)) {
+				const genomeProgram = genomeToProgram(genome);
 				console.log(`Found program: ${genomeProgram}`);
 				return genomeProgram;
 			}
@@ -134,7 +135,7 @@ const mutationProgramSearch = (tests: number[][], populationSize: number, genera
 
 		for (let i = 0; i < populationSize; i++) {
 			let mutatedGenome = mutateGenome(population[i]);
-			if (!isProgramValid(genomeToProgram(mutatedGenome))) {
+			if (!isGenomeValid(mutatedGenome)) {
 				mutatedGenome = generateInitialGenome(8);
 			}
 			population[i] = mutatedGenome;
@@ -142,15 +143,12 @@ const mutationProgramSearch = (tests: number[][], populationSize: number, genera
 	}
 };
 
-const randomProgramSearch = (tests: number[][], attempts: number = 100) => {
+const randomProgramSearch = (tests: Test[], attempts: number = 100) => {
 	for (let i = 0; i < attempts; i++) {
 		const genome = generateInitialGenome(8);
 		const genomeProgram = genomeToProgram(genome);
-		// console.log(genome);
-		// console.log(genomeProgram);
-		// console.log(isProgramValid(genomeProgram));
 
-		const isTestsFailing = !doesProgramPassTests(tests, genomeProgram);
+		const isTestsFailing = !doesGenomePassTests(tests, genome);
 
 		if (isTestsFailing) console.log(`${i}: Tests failed!`);
 
@@ -162,18 +160,18 @@ const randomProgramSearch = (tests: number[][], attempts: number = 100) => {
 };
 
 const tests = [
-	[1, 1, 1, 1],
-	[2, 2, 2, 8],
-	[3, 3, 3, 27],
-	[4, 4, 4, 64],
+	{ x: [1, 1, 1], y: 1 },
+	{ x: [2, 2, 2], y: 8 },
+	{ x: [3, 3, 3], y: 27 },
+	{ x: [4, 4, 4], y: 64 },
 ];
 
 const testsAplusBmulC = [
-	[1, 1, 1, 2],
-	[2, 3, 3, 11],
-	[3, 1, 3, 6],
-	[4, 2, 4, 12],
+	{ x: [1, 1, 1], y: 2 },
+	{ x: [2, 3, 3], y: 11 },
+	{ x: [3, 1, 3], y: 6 },
+	{ x: [4, 2, 4], y: 12 },
 ];
 
-const program = mutationProgramSearch(testsAplusBmulC, 20, 50);
+const program = mutationProgramSearch(testsAplusBmulC, 20, 100);
 console.log(program);
