@@ -106,6 +106,42 @@ const doesProgramPassTests = (tests: number[][], program: Program) => {
 	return true;
 };
 
+const mutateGenome = (genome: Genome): Genome => {
+	const newGenome = [...genome];
+	if (Math.random() < 0.02) newGenome.push(randomOperant());
+	if (Math.random() < 0.02) newGenome.pop();
+	const index = randomIntBetween(0, genome.length - 1);
+	const newGene = index < 2 ? randomPush() : randomOperant();
+	newGenome[index] = newGene;
+	return newGenome;
+};
+
+const mutationProgramSearch = (tests: number[][], populationSize: number, generationCount: number) => {
+	const population = [];
+	for (let i = 0; i < populationSize; i++) {
+		population.push(generateInitialGenome(8));
+	}
+
+	for (let gen = 0; gen < generationCount; gen++) {
+		console.log(`Generation ${gen}`);
+		for (const genome of population) {
+			const genomeProgram = genomeToProgram(genome);
+			if (isProgramValid(genomeProgram) && doesProgramPassTests(tests, genomeProgram)) {
+				console.log(`Found program: ${genomeProgram}`);
+				return genomeProgram;
+			}
+		}
+
+		for (let i = 0; i < populationSize; i++) {
+			let mutatedGenome = mutateGenome(population[i]);
+			if (!isProgramValid(genomeToProgram(mutatedGenome))) {
+				mutatedGenome = generateInitialGenome(8);
+			}
+			population[i] = mutatedGenome;
+		}
+	}
+};
+
 const randomProgramSearch = (tests: number[][], attempts: number = 100) => {
 	for (let i = 0; i < attempts; i++) {
 		const genome = generateInitialGenome(8);
@@ -132,5 +168,12 @@ const tests = [
 	[4, 4, 4, 64],
 ];
 
-const program = randomProgramSearch(tests);
+const testsAplusBmulC = [
+	[1, 1, 1, 2],
+	[2, 3, 3, 11],
+	[3, 1, 3, 6],
+	[4, 2, 4, 12],
+];
+
+const program = mutationProgramSearch(testsAplusBmulC, 20, 50);
 console.log(program);
