@@ -15,7 +15,7 @@ type Operant = (typeof operantMap)[keyof typeof operantMap];
 type Genome = number[];
 type Program = Operant[];
 
-const testProgram = (program: Program, data: number[]) => {
+const runProgram = (program: Program, data: number[]) => {
 	const stack: number[] = [];
 	for (const operant of program) {
 		switch (operant) {
@@ -42,26 +42,9 @@ const testProgram = (program: Program, data: number[]) => {
 				break;
 		}
 	}
-	console.log(stack);
 	if (stack.length !== 1) return undefined;
 	return stack.pop()!;
 };
-
-const tests = [
-	[1, 1, 1, 1],
-	[2, 2, 2, 8],
-	[3, 3, 3, 27],
-	[4, 4, 4, 64],
-];
-
-const program: Operant[] = ["push-a", "push-b", "push-c", "multiply", "multiply"];
-
-for (const test of tests) {
-	const result = testProgram(program, test);
-	if (result !== test[3]) {
-		console.log("Test failed!");
-	}
-}
 
 const randomIntBetween = (min: number, max: number) => {
 	return Math.floor(Math.random() * (max - min + 1) + min);
@@ -115,8 +98,39 @@ const isProgramValid = (program: Program) => {
 	}
 };
 
-const genome = generateInitialGenome(8);
-const genomeProgram = genomeToProgram(genome);
-console.log(genome);
-console.log(genomeProgram);
-console.log(isProgramValid(genomeProgram));
+const doesProgramPassTests = (tests: number[][], program: Program) => {
+	for (const test of tests) {
+		const result = runProgram(program, test);
+		if (result !== test[3]) return false;
+	}
+	return true;
+};
+
+const randomProgramSearch = (tests: number[][], attempts: number = 100) => {
+	for (let i = 0; i < attempts; i++) {
+		const genome = generateInitialGenome(8);
+		const genomeProgram = genomeToProgram(genome);
+		// console.log(genome);
+		// console.log(genomeProgram);
+		// console.log(isProgramValid(genomeProgram));
+
+		const isTestsFailing = !doesProgramPassTests(tests, genomeProgram);
+
+		if (isTestsFailing) console.log(`${i}: Tests failed!`);
+
+		if (!isTestsFailing) {
+			console.log(`${i}: Found right program!`);
+			return genomeProgram;
+		}
+	}
+};
+
+const tests = [
+	[1, 1, 1, 1],
+	[2, 2, 2, 8],
+	[3, 3, 3, 27],
+	[4, 4, 4, 64],
+];
+
+const program = randomProgramSearch(tests);
+console.log(program);
